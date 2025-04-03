@@ -146,35 +146,36 @@ void getSensorData(void* pvParameters) {
 
 // Function to initialize PWM for the drone's motors
 void initializePWM() {
-  Serial.println("Initializing PWM signal for motors...");
+  Serial.println("Initializing PWM signal for motors using MCPWM...");
 
-  // Configure PWM channels for 4 motors
-  for (int i = 0; i < 4; i++) {
-      ledc_channel_config_t pwmChannel = {
-          .gpio_num = 27++, //Use GPIO 27 and increment for each motor
-          .speed_mode = LEDC_HIGH_SPEED_MODE,
-          .channel = i,
-          .timer_sel = LEDC_TIMER_0,
-          .hpoint = 0
-      };
-      ledc_channel_config(&pwmChannel);
-  }
+  // Define GPIO pins for ESC motors
+  const int ESC1_PIN = 27;
+  const int ESC2_PIN = 14;
+  const int ESC3_PIN = 12;
+  const int ESC4_PIN = 13;
 
-  // Notes on PWM frequency and resolution:
-  // - Duty cycle of  motor based on PWM resolution used (duty_resolution)
-  // - duty cycle (%) = ((duty / (2^resolution)) * 100)
+  // Initialize MCPWM GPIOs for ESCs
+  //Use the two MCPWM units available on the ESP32
+  //Reference: https://docs.espressif.com/projects/esp-idf/en/v4.3/esp32/api-reference/peripherals/mcpwm.html
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, ESC1_PIN);
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0B, ESC2_PIN);
+  mcpwm_gpio_init(MCPWM_UNIT_1, MCPWM1A, ESC3_PIN);
+  mcpwm_gpio_init(MCPWM_UNIT_1, MCPWM1B, ESC4_PIN);
 
-  // Configure the timer for PWM
-  ledc_timer_config_t pwmTimer = {
-      .speed_mode = LEDC_HIGH_SPEED_MODE,
-      .timer_num = LEDC_TIMER_0,
-      .duty_resolution = LEDC_TIMER_10_BIT, // adjust based on duty cycle for ESCs
-      .freq_hz = 50, // 50Hz for ESCs, adjust as needed
-      .clk_cfg = LEDC_AUTO_CLK
+  // Configure MCPWM for ESCs
+  mcpwm_config_t pwm_config = {
+      .frequency = 50, // use 50Hz frequency for ESCs
+      .cmpr_a = 0,     // Initial duty cycle for channel A
+      .cmpr_b = 0,     // Initial duty cycle for channel B
+      .counter_mode = MCPWM_UP_COUNTER,
+      .duty_mode = MCPWM_DUTY_MODE_0
   };
-  ledc_timer_config(&pwmTimer);
 
-  Serial.println("PWM initialization complete.");
+  // Initialize MCPWM units and timers
+  mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &pwm_config);
+  mcpwm_init(MCPWM_UNIT_1, MCPWM_TIMER_1, &pwm_config);
+
+  Serial.println("PWM initialization using MCPWM complete.");
 }
 
 void initializeHardWare() {
