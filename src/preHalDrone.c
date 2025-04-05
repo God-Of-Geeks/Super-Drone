@@ -61,6 +61,12 @@ void MPU6050_SensorTask(void *pvParameters) {
 
   // Initialize MPU6050
   Adafruit_MPU6050 mpu;
+  if(!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
+  }
   while (1) {
 
     //get sensor data and save into variables
@@ -140,7 +146,7 @@ void BME280_SensorTask(void *pvParameters) {
 void getSensorData(void* pvParameters) {
   Serial.println("Getting sensor data from BME280 and MPU6050");
   // Create tasks for both sensors
-  xTaskCreatePinnedToCore(BME280_SensorTask, "BME280_SensorTask", 2048, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(BME280_SensorTask, "BME280_SensorTask", 2048, NULL, 2, NULL, 0);
   xTaskCreatePinnedToCore(MPU6050_SensorTask, "MPU6050_SensorTask", 2048, NULL, 1, NULL, 1);
 }
 
@@ -187,7 +193,7 @@ void initializeHardWare() {
       Serial.println("Failed to create BME280 queue");
   }
 
-  // Initialize MPU6050 queue
+  // Create MPU6050 queue
   mpu6050Queue = xQueueCreate(10, sizeof(mpu6050Data_t));
   if (mpu6050Queue == NULL) {
       Serial.println("Failed to create MPU6050 queue");
@@ -205,12 +211,6 @@ void setup() {
 
   Serial.print("Initializing hardware!!!");
   initializeHardWare();
-
-  //change based on data receieved
-  bmeSensorQueue = xQueueCreate(10, sizeof( &xData_t ));
-  if(DataQueue == NULL){
-     Serial.println("Queue was not created and must not be used");
-   }
 
   bool status;
   status = bme.begin(0x76); //default address is 0x77
